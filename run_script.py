@@ -174,9 +174,22 @@ def score_company_deterministic(company_details):
     return scores, max_icp_feature_score # return max score category for explainability
 
 def score_company_total_10(company_details, weights=None):
-    """
-    Returns a single total score scaled to 10
-    """
+
+    company_data = company_details.get("data") or {}
+
+    # default missing fields
+    company_data.setdefault("description", "")
+    company_data.setdefault("industriesV2", [])
+    company_data.setdefault("industriesLegacy", [])
+    company_data.setdefault("specialities", [])
+    company_data.setdefault("staffCount", 0)
+    company_data.setdefault("website", "")
+    company_data.setdefault("founded", {"year": 0, "month": 0, "day": 0})
+    company_data.setdefault("headquarter", {})
+    company_data.setdefault("locations", [])
+
+    # Returns a single total score scaled to 10
+
     # Compute individual 0–1 scores
     scores, max_icp_feature_score = score_company_deterministic(company_details)
 
@@ -213,7 +226,7 @@ def geocode_location(company_details, company_name):
         print("entered loc loop")
 
         # First try company-level query
-        query_company = build_nominatim_query(loc, company=company_name, include_company_name=True)
+        query_company = build_nominatim_query(loc, company=company_name, include_company_name=True, include_postal=True)
         headers_nom = {"User-Agent": "tractian-case-study"}
         response3 = requests.get(f"https://nominatim.openstreetmap.org/search?q={query_company}&format=json&limit=1", headers=headers_nom)
         data3 = response3.json()
@@ -224,7 +237,7 @@ def geocode_location(company_details, company_name):
             print(f"Place type from Nominatim: '{place_type}'")
             address_types.append(place_type)
         elif loc.get("line1"):  # Then try street-level query
-            query_street = build_nominatim_query(loc, include_company_name=False)
+            query_street = build_nominatim_query(loc, include_company_name=False, include_postal = True)
             response3 = requests.get(f"https://nominatim.openstreetmap.org/search?q={query_street}&format=json&limit=1", headers=headers_nom)
             data3 = response3.json()
             if data3:
@@ -258,22 +271,28 @@ mini_df = pd.DataFrame(columns=['Company', 'Website', 'Facility Location', "Faci
 for company_name, company_website in provided_companies.items():
     # Provided
     # Get Company Details from LinkdAPI (2 endpoints needed - first to get company ID, second to get details)
-    company_info = fetch_company_info(company_name)
-    if not company_info or "data" not in company_info:
-        print(f"No details found for {company_name}, skipping.")
-        continue
-    company_details = company_info.get("data", {})
 
-    print(company_details)
     # Extract company-level features and score on ICP fit using deterministic function
     # Extract location details and use for later geocoding
-    # Deterministic scoring using keywords and semantic similarity for ICP fit, 6 priority features each get a score and relative weighting 
-    score_10, max_icp_feature_score = score_company_total_10(company_details)
-    print("Company " + company_name + " scores " + str(score_10))
+    # Deterministic scoring using keywords and semantic similarity for ICP fit, 6 priority features each get a score and relative weighting
+
+    try:
+        company_info = fetch_company_info(company_name)
+        if not company_info or "data" not in company_info:
+            print(f"Skipping {company_name}")
+            continue
+
+        company_details = company_info["data"]
+
+        score_10, max_icp_feature_score = score_company_total_10(company_details)
+        addresses, address_types = geocode_location(company_details, company_name)
+
+    except Exception as e:
+        print(f"Error with {company_name}: {e}")
+        continue
 
     # Geocode using Nominatim and GeoApify to get facility locations and types (HQ, branch, etc.) for table display 
     # Try different query
-    addresses, address_types = geocode_location(company_details, company_name)
 
     length = len(address_types)
     # make into a temp dataframe

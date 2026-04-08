@@ -16,13 +16,11 @@ if os.path.exists(csv_path):
     os.remove(csv_path)
 
 
-
 provided_companies = {
-    "Caterpillar": "https://www.caterpillar.com",
+    "Nike": "https://www.nike.com",
     "Boeing": "https://www.boeing.com",
-    "General Motors": "https://www.gm.com",
-    "Ford": "https://www.ford.com",
-    "Johnson & Johnson": "https://www.jnj.com",
+    "Databricks": "https://www.databricks.com",
+    "Hulu": "https://www.hulu.com",
     "PepsiCo": "https://www.pepsico.com",
     "Chipotle": "https://www.chipotle.com",
     "Olive Garden": "https://www.olivegarden.com",
@@ -39,7 +37,6 @@ provided_companies = {
     "Under Armour": "https://www.underarmour.com",
     "Chanel": "https://www.chanel.com"
 }
-
 def company_name_lookup(company_name: str):
     linkdapi_key = os.getenv("LINKDAPI_KEY")
     client = LinkdAPI(linkdapi_key) # initialize LinkdAPI client with API key
@@ -280,13 +277,17 @@ def geocode_location(company_details, company_name):
     return addresses, address_types
                 
 master_df = pd.DataFrame(columns=['Company', 'Website', 'Facility Location', "Facility Type", "ICP Fit Score", "Primary ICP Feature"])
-mini_df = pd.DataFrame(columns=['Company', 'Website', 'Facility Location', "Facility Type", "ICP Fit Score", "Primary ICP Feature"], index=range(length))
+mini_df = pd.DataFrame(columns=['Company', 'Website', 'Facility Location', "Facility Type", "ICP Fit Score", "Primary ICP Feature"])
 
 # Main script logic
 for company_name, company_website in provided_companies.items():
     # Provided
     # Get Company Details from LinkdAPI (2 endpoints needed - first to get company ID, second to get details)
-    company_details = fetch_company_info(company_name).get("data", {})
+    # company_details = fetch_company_info(company_name).get("data", {})
+    company_details = fetch_company_info(company_name)
+    if not company_info:
+        print(f"Can't find company '{company_name}'. Moving to the next.")
+        continue  # skips this company but keeps the loop running
     print(company_details)
     # Extract company-level features and score on ICP fit using deterministic function
     # Extract location details and use for later geocoding

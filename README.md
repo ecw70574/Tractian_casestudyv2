@@ -18,3 +18,6 @@ Make GeoApify account (free) here: https://www.geoapify.com
 4. Install dependencies
 
 pip install -r requirements.txt
+
+5. Run
+python run_script.py
