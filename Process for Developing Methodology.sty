@@ -1,0 +1,40 @@
+Process for Developing Methodology
+
+This case methodology has changed drastically over the course of only a week. This problem truly made me think and look 
+for new methods and approaches to problems I have seen many times before. My original plan was to use a series of API calls to 
+deterministically ascertain each location for a given company’s facilities, as well as the type of the address. The goal was also 
+to extract company-specific features such as the industry, specialties, size, and description along with the facility location information. 
+I found this unique combination of APIs by a series of google searches for inputs and desired outputs. 
+
+I originally meant to iterate through a series of HTML webpages for a given website, to find an “about us” field. 
+Upon further strategization, it proved to be extremely inconsistent from one company’s website to another, as well as 
+expansive to get the HTTP for each webpage and efficiently “jump” between them. I began looking for an API that could take a company 
+and return key features about it, including the locations of its facilities. I thought about how company profiles on LinkedIn, and 
+found that LinkdAPI has similar behaviors. I chose to use the “company lookup” endpoint (which takes our given company name in plaintext), 
+and feed that result to a call to its “company details” endpoint. This returns a dictionary of company-level information, as well as an 
+array of locations with field such as street address, city, geographic area, country, zip code. I began searching for another API I could 
+feed these addresses to in order to determine facility type, and I found Nominatim OpenStreetMap API. This process proved to be much less 
+straightforward than I initially thought. Some issues that arose quickly:
+- Different address fields were present for different locations
+- Addresses are formatted differently in different countries (can confuse Nominatim)
+- The street address field + the company name together would confuse Nominatim
+- Sometimes the street address would have only a number, street name, or not be a present field at all
+- Nominatim makes it difficult to search for a company name and address at same time (these are two different kinds of queries) 
+- Searching for company name and region alone may return multiple results
+- Searching using only address and not guide query with the company name - may return another nearby building/facility 
+not associated with the location we are aiming to find/classify
+The pipeline I developed to error-handle and acknowledge these limitations was to build a query using Company name + geographic area + country + zip code 
+to use on Nominatim geocoder endpoint. Then, if the street address had a streetname and number (not just one or the other or empty field), 
+I would try the query again with the street address instead of the company name. Since the goal was to use the “addresstype” field returned 
+by Nominatim’s JSON response, if this street address query was not successful, I would geocode using GeoApify’s forward geocoding endpoint 
+and feed that proper address to Nominatim, requery, and get the “address” field. If this third attempt was unsuccessful, due to API request 
+limits and time constraints, I set the address type “unknown”. If I had more time to revisit and refine this project, I would add another 
+layer of intelligence to infer the location type from the majority facility type for that location, cluster similar companies and their 
+location types, or use more information from another source about that company’s facilities. I originally was using the Overpass Openstreetmap 
+API to geocode because it returned a more detailed address type, but these field names changed or were often not present. The consistency of 
+Nominatim an GeoApify geocoding API’s return schema made it more stable for use in this project with many different companies. If it were used 
+for only certain cases, it is possible the Overpass Openstreetmap API would have predictable behavior. 
+
+
+
+
