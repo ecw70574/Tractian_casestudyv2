@@ -23,9 +23,10 @@ straightforward than I initially thought. Some issues that arose quickly:
 - Searching for company name and region alone may return multiple results
 - Searching using only address and not guide query with the company name - may return another nearby building/facility 
 not associated with the location we are aiming to find/classify
-The pipeline I developed to error-handle and acknowledge these limitations was to build a query using Company name + geographic area + country + zip code 
-to use on Nominatim geocoder endpoint. Then, if the street address had a streetname and number (not just one or the other or empty field), 
-I would try the query again with the street address instead of the company name. Since the goal was to use the “addresstype” field returned 
+The pipeline I developed to error-handle and acknowledge these limitations was to build a query using 
+Company name + geographic area + country + zip code to use on Nominatim geocoder endpoint. Then, if the street address had a streetname 
+and number (not just one or the other or empty field), I would try the query again with the street address instead of the company name. 
+Since the goal was to use the “addresstype” field returned 
 by Nominatim’s JSON response, if this street address query was not successful, I would geocode using GeoApify’s forward geocoding endpoint 
 and feed that proper address to Nominatim, requery, and get the “address” field. If this third attempt was unsuccessful, due to API request 
 limits and time constraints, I set the address type “unknown”. If I had more time to revisit and refine this project, I would add another 
@@ -35,6 +36,34 @@ API to geocode because it returned a more detailed address type, but these field
 Nominatim an GeoApify geocoding API’s return schema made it more stable for use in this project with many different companies. If it were used 
 for only certain cases, it is possible the Overpass Openstreetmap API would have predictable behavior. 
 
+After the location/facility-specific columns were determined for the current company, the “goodness of fit” for Tractain ICP was the next 
+information compute. After working with and building other RAG systems in past projects, I immediately formalized this problem as a use case 
+for a vectorized database an LLM could query to ground insights in a pre-defined Tractian-specific ground truth. I wanted to compute a 
+structured score based on my interpretation of the most important criteria for Tractian ICP from reading over the Tractian website and
+examining past and current companies Tractian has worked with. I wanted to average this structured score with an LLM-with-RAG
+implementation. I also asked the LLM agent the 6 criteria I was using to determine the final score. I created a vectorized database 
+with “documents” from various excerpts about Tractain’s mission, typical clients, use cases, and previous clients. I was also going
+to include the ICP scores given in the demonstrated examples of the case study as examples. Averaging the structured scores
+(each of 6-fold score determined based on keyword search and semantic search using embeddings) with LLM-with-RAG score would
+introduce human review, transparent scoring, and a defined source of truth from Tractian information. In addition to providing the LLM 
+access to the Tractian ICP vectorized database, 6-part scoring criteria from my own review of Tractian ICP guidelines, and company-specific 
+features (company description, industry, industry grouping, specializations, number of employees, number of facilities, typical facility type,
+ and company website – all pulled from given information and features extracted from “company details” endpoint of LinkdAPI query. 
+Unfortunately, due to compute resources and free API credentials, I had to do away with my methodology to utilize RAG. I didn’t have access 
+to OpenAI or Google geocoding API’s due to paid plans for these tools. No pre-built HuggingFace LLM would make inferences quickly enough 
+(even after making adjustments to my algorithm, number of tokens, size of the vectorized database, or size of each document in vectorized 
+database). Once I let it run long enough (several minutes for one company), the LLM would always score a 0, but the runtime and complexity of
+the problem led me to explore other alternatives. I scored companies using only the aforementioned structured score, using semantic search 
+for industry, and keyword searches within other company-specific features extracted from the API to determine a score for each feature. I 
+weighted these features based on my own interpretation of Tractian criteria. I also stored a value in each row for the highest scoring 
+feature for that particular company to provide more insight into the score. As I was unaware of the limitations to an unpaid LinkdAPI 
+account, I unknowingly ran out of credentials of my training phase (even in making 3 accounts with 3 separate emails) and decided to 
+submit the project as-is. In order to get an output table (written to a CSV), there are instructed in the provided repository about how 
+to run the script. The READMe contains instructions on which API keys are needed and how they should be stored into environmental variables. 
+
+I am more than happy to explain any other details of my existing methodology or future works upon request. Please see diagrams, 
+brainstorming notes, and other details in my handwritten outline in the repository’s “TractianStudy_MethodsBrainstorming.pdf” file. The companies
+I included in the script are only an example, which I expect to have a variety of scores due to the range of their industries and company-specific features. 
 
 
 
